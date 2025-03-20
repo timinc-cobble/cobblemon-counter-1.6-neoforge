@@ -17,7 +17,7 @@ import us.timinc.mc.cobblemon.counter.storage.PlayerInstancedDataStores
 @Mod(MOD_ID)
 object CounterModClient {
     var clientCounterData: ClientCounterManager = ClientCounterManager(mutableMapOf())
-    var config: ClientCounterConfig = ConfigBuilder.load(ClientCounterConfig::class.java, MOD_ID)
+    var config: ClientCounterConfig = ConfigBuilder.load(ClientCounterConfig::class.java, "${MOD_ID}_client")
 
     @EventBusSubscriber
     object Registration {
