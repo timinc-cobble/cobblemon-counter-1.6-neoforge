@@ -19,14 +19,6 @@ object CounterModClient {
     var clientCounterData: ClientCounterManager = ClientCounterManager(mutableMapOf())
     var config: ClientCounterConfig = ConfigBuilder.load(ClientCounterConfig::class.java, "${MOD_ID}_client")
 
-    @EventBusSubscriber
-    object Registration {
-        @SubscribeEvent
-        fun onLogin(e: PlayerLoggedInEvent) {
-            clientCounterData = ClientCounterManager(mutableMapOf())
-        }
-    }
-
     @EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)
     object ModRegistration {
         @SubscribeEvent
