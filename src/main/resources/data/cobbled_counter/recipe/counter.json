@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "AB ",
+    "BCB",
+    " B "
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:stone_button"
+    },
+    "B": {
+      "item": "minecraft:stone"
+    },
+    "C": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "id": "cobbled_counter:counter"
+  }
+}
