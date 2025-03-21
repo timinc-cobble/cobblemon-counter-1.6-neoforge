@@ -5,7 +5,6 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
-import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent
 import us.timinc.mc.cobblemon.counter.CounterMod.MOD_ID
 import us.timinc.mc.cobblemon.counter.api.ClientCounterManager
 import us.timinc.mc.cobblemon.counter.api.CounterRegistry
