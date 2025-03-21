@@ -2,7 +2,6 @@ package us.timinc.mc.cobblemon.counter.event.handler
 
 import com.cobblemon.mod.common.api.Priority
 import com.cobblemon.mod.common.api.events.CobblemonEvents
-import com.cobblemon.mod.common.platform.events.PlatformEvents
 
 object CounterEventHandlers {
     fun register() {
