@@ -29,6 +29,7 @@ object CounterMod {
 
     private var logger: Logger = LogManager.getLogger(MOD_ID)
     var config: CounterConfig = ConfigBuilder.load(CounterConfig::class.java, MOD_ID)
+    var eventsInitialized = false
 
     @EventBusSubscriber
     object Registration {
@@ -36,7 +37,6 @@ object CounterMod {
         fun onInit(e: ServerStartedEvent) {
             ServerStartingHandler.handle(e)
             CounterRegistry
-            CounterEventHandlers.register()
             saveTasks[PlayerInstancedDataStores.COUNTER] = ScheduledTask.Builder()
                 .execute { Cobblemon.playerDataManager.saveAllOfOneType(PlayerInstancedDataStores.COUNTER) }
                 .delay(30f)
@@ -44,6 +44,9 @@ object CounterMod {
                 .infiniteIterations()
                 .tracker(ServerTaskTracker)
                 .build()
+            if (eventsInitialized) return
+            eventsInitialized = true
+            CounterEventHandlers.register()
         }
     }
 
