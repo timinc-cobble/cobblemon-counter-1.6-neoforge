@@ -100,7 +100,8 @@ class CounterManager(
     ) {
         val formOverride = CounterMod.config.getFormOverride(initialSpeciesId, initialFormName)
         val speciesId = if (formOverride === null) initialSpeciesId else ResourceLocation.parse(formOverride.toSpecies)
-        val formName = if (formOverride === null) initialFormName else formOverride.toForm
+        val formName =
+            if (!CounterMod.config.breakStreakOnForm(counterType)) "untracked" else if (formOverride === null) initialFormName else formOverride.toForm
 
         var doRecord = false
         CounterEvents.RECORD_PRE.postThen(RecordEvent.Pre(
@@ -115,7 +116,7 @@ class CounterManager(
         speciesRecord[formName] = speciesRecord.getOrDefault(formName, 0) + 1
 
         var streakChanged = false
-        if (counter.streak.wouldBreak(speciesId, formName, CounterMod.config.breakStreakOnForm(counterType))) {
+        if (counter.streak.wouldBreak(speciesId, formName)) {
             if (breakStreak(counterType, speciesId, formName, pokemon)) {
                 streakChanged = true
             }
