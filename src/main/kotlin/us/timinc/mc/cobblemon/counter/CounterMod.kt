@@ -3,6 +3,8 @@ package us.timinc.mc.cobblemon.counter
 import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.api.scheduling.ScheduledTask
 import com.cobblemon.mod.common.api.scheduling.ServerTaskTracker
+import com.cobblemon.mod.common.api.spawning.condition.AppendageCondition
+import com.cobblemon.mod.common.api.spawning.condition.SpawningCondition
 import com.cobblemon.mod.common.api.storage.player.PlayerInstancedDataStoreType
 import net.minecraft.resources.ResourceLocation
 import net.neoforged.bus.api.SubscribeEvent
@@ -19,6 +21,7 @@ import us.timinc.mc.cobblemon.counter.config.CounterConfig
 import us.timinc.mc.cobblemon.counter.event.handler.CounterEventHandlers
 import us.timinc.mc.cobblemon.counter.event.handler.ServerStartingHandler
 import us.timinc.mc.cobblemon.counter.item.CounterItems
+import us.timinc.mc.cobblemon.counter.spawning_conditions.CountSpawningCondition
 import us.timinc.mc.cobblemon.counter.storage.PlayerInstancedDataStores
 
 @Mod(CounterMod.MOD_ID)
@@ -30,6 +33,10 @@ object CounterMod {
     private var logger: Logger = LogManager.getLogger(MOD_ID)
     var config: CounterConfig = ConfigBuilder.load(CounterConfig::class.java, MOD_ID)
     var eventsInitialized = false
+
+    init {
+        AppendageCondition.registerAppendage(SpawningCondition::class.java, CountSpawningCondition::class.java)
+    }
 
     @EventBusSubscriber
     object Registration {
