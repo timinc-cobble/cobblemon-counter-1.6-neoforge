@@ -4,10 +4,12 @@ package us.timinc.mc.cobblemon.counter.config
 
 import net.minecraft.resources.ResourceLocation
 import us.timinc.mc.cobblemon.counter.api.CounterType
+import us.timinc.mc.cobblemon.counter.api.CounterTypeRegistry
 
 class CounterConfig {
     val debug: Boolean = false
-    val breakStreakOnForm: List<String> = CounterType.entries.map { it.type }
+    val breakStreakOnForm: Set<String> = CounterTypeRegistry.types().toSet()
+    val broadcast: Set<String> = CounterTypeRegistry.types().toSet()
     val formOverrides: List<FormOverride> = listOf(
         FormOverride(
             "cobblemon:aegislash",

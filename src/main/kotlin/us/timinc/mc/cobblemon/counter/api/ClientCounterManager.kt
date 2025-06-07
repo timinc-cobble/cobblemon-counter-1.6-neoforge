@@ -12,6 +12,7 @@ import us.timinc.mc.cobblemon.counter.storage.PlayerInstancedDataStores
 
 class ClientCounterManager(
     override val counters: MutableMap<CounterType, Counter>,
+    val broadcasts: Set<String>,
 ) : AbstractCounterManager(), ClientInstancedPlayerData {
     override fun encode(buf: RegistryFriendlyByteBuf) {
         buf.writeMap(
@@ -19,15 +20,22 @@ class ClientCounterManager(
             { _, key -> buf.writeString(key.type) },
             { _, value -> value.encode(buf) }
         )
+        buf.writeCollection(
+            broadcasts
+        ) { _, value -> buf.writeString(value) }
     }
 
     companion object {
         fun decode(buf: RegistryFriendlyByteBuf): SetClientPlayerDataPacket {
-            val map = buf.readMap(
-                { buf.readString().let { type -> CounterType.entries.find { it.type == type }!! } },
+            val map = buf.readMap<CounterType, Counter>(
+                { buf.readString().let(CounterTypeRegistry::findByType) },
                 { Counter().also { it.decode(buf) } }
             )
-            return SetClientPlayerDataPacket(PlayerInstancedDataStores.COUNTER, ClientCounterManager(map))
+            val broadcasts = buf.readList { buf.readString() }
+            return SetClientPlayerDataPacket(
+                PlayerInstancedDataStores.COUNTER,
+                ClientCounterManager(map, broadcasts.toSet())
+            )
         }
 
         fun runAction(data: ClientInstancedPlayerData) {
@@ -40,19 +48,21 @@ class ClientCounterManager(
 
             val clientData = CounterModClient.clientCounterData
             for ((counterType, counter) in data.counters.entries) {
-                val changedStreak = counter.streak.species.toString() != "minecraft:empty"
+                val changedStreak = counter.streak.changed()
                 val targetClientCounter = clientData.counters[counterType]
                     ?: throw Error("Unregistered counter type sent by server ${counterType.type}")
                 for ((speciesId, speciesRecord) in counter.count) {
                     val clientSpeciesRecord = targetClientCounter.count.getOrPut(speciesId, ::mutableMapOf)
                     for ((formName, count) in speciesRecord) {
-                        if (CounterModClient.config.broadcast.contains(counterType.type)) {
+                        val clientBroadcastOn = CounterModClient.config.broadcast[counterType.type]
+                        val serverBroadcastOn = data.broadcasts.contains(counterType.type)
+                        if (clientBroadcastOn ?: serverBroadcastOn) {
                             val player = Minecraft.getInstance().player ?: return
                             player.sendSystemMessage(
                                 Component.translatable(
                                     "cobbled_counter.broadcast.${counterType.type}",
                                     Component.translatable("cobblemon.species.${speciesId.path}.name"),
-                                    if (formName == "Normal") "" else Component.translatable(
+                                    if (formName == "Normal" || formName == "untracked") "" else Component.translatable(
                                         "cobbled_counter.item.counter.tooltip.form",
                                         formName
                                     ),

@@ -4,9 +4,10 @@ import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.PrimitiveCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import net.minecraft.resources.ResourceLocation
+import us.timinc.mc.cobblemon.counter.CounterMod.modResource
 
 class Streak(
-    var species: ResourceLocation = ResourceLocation.parse("minecraft:empty"),
+    var species: ResourceLocation = EMPTY_SPECIES,
     var form: String = "normal",
     var count: Int = 0,
 ) {
@@ -20,6 +21,8 @@ class Streak(
                 Streak(species, form, count)
             }
         }
+        val IGNORED_SPECIES = modResource("ignored")
+        val EMPTY_SPECIES = modResource("empty")
     }
 
     fun clone(): Streak {
@@ -29,4 +32,6 @@ class Streak(
     fun wouldBreak(speciesId: ResourceLocation, formName: String): Boolean {
         return speciesId != species || form != formName
     }
+
+    fun changed(): Boolean = species != IGNORED_SPECIES
 }
