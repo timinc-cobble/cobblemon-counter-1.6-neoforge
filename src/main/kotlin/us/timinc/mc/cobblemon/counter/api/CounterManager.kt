@@ -10,6 +10,8 @@ import com.mojang.serialization.codecs.PrimitiveCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import net.minecraft.resources.ResourceLocation
 import us.timinc.mc.cobblemon.counter.CounterMod
+import us.timinc.mc.cobblemon.counter.CounterMod.config
+import us.timinc.mc.cobblemon.counter.api.Streak.Companion.IGNORED_SPECIES
 import us.timinc.mc.cobblemon.counter.event.BreakStreakEvent
 import us.timinc.mc.cobblemon.counter.event.CounterEvents
 import us.timinc.mc.cobblemon.counter.event.RecordEvent
@@ -18,18 +20,18 @@ import java.util.*
 
 class CounterManager(
     override val uuid: UUID,
-    override val counters: Map<CounterType, Counter> = CounterRegistry.counterTypes.associateWith { Counter() },
+    override val counters: Map<CounterType, Counter> = CounterTypeRegistry.counterTypes().associateWith { Counter() },
 ) : AbstractCounterManager(), InstancedPlayerData {
     companion object {
         val CODEC: Codec<CounterManager> = RecordCodecBuilder.create { instance ->
             instance.group(PrimitiveCodec.STRING.fieldOf("uuid").forGetter { it.uuid.toString() },
                 Codec.unboundedMap(PrimitiveCodec.STRING, Counter.CODEC).fieldOf("counters").forGetter { manager ->
                     manager.counters.keys.map { key -> key.type }
-                        .associateWith { key -> manager.counters[CounterType.entries.find { it.type == key }]!!.clone() }
+                        .associateWith { key -> manager.counters[CounterTypeRegistry.findByType(key)]!!.clone() }
                 }).apply(instance) { uuid, counters ->
-                CounterManager(UUID.fromString(uuid), counters.keys.map { key ->
-                    CounterType.entries.find { it.type == key }!!
-                }.associateWith { key -> counters[key.type]!!.clone() })
+                CounterManager(UUID.fromString(uuid), CounterTypeRegistry.counterTypes().associateWith { counterType ->
+                    counters[counterType.type]?.clone() ?: Counter()
+                })
             }
         }
     }
@@ -98,10 +100,10 @@ class CounterManager(
         counterType: CounterType,
         pokemon: Pokemon? = null,
     ) {
-        val formOverride = CounterMod.config.getFormOverride(initialSpeciesId, initialFormName)
+        val formOverride = config.getFormOverride(initialSpeciesId, initialFormName)
         val speciesId = if (formOverride === null) initialSpeciesId else ResourceLocation.parse(formOverride.toSpecies)
         val formName =
-            if (!CounterMod.config.breakStreakOnForm(counterType)) "untracked" else if (formOverride === null) initialFormName else formOverride.toForm
+            if (!config.breakStreakOnForm(counterType)) "untracked" else if (formOverride === null) initialFormName else formOverride.toForm
 
         var doRecord = false
         CounterEvents.RECORD_PRE.postThen(RecordEvent.Pre(
@@ -132,10 +134,10 @@ class CounterManager(
                 counterType to Counter(
                     mutableMapOf(
                         speciesId to mutableMapOf(formName to speciesRecord[formName]!!)
-                    ),
-                    if (streakChanged) counter.streak else Streak()
+                    ), if (streakChanged) counter.streak else Streak(IGNORED_SPECIES)
                 )
-            )
+            ),
+            config.broadcast
         )
 
         player.sendPacket(
@@ -151,10 +153,57 @@ class CounterManager(
         )
     }
 
+    fun setStreakScore(counterType: CounterType, speciesId: ResourceLocation, formName: String, score: Int) {
+        val player = uuid.getPlayer() ?: return
+
+        val counter = getCounter(counterType)
+        counter.streak = Streak(speciesId, formName, score)
+
+        val patchData = ClientCounterManager(
+            mutableMapOf(
+                counterType to Counter(
+                    mutableMapOf(), counter.streak
+                )
+            ),
+            config.broadcast
+        )
+
+        player.sendPacket(
+            SetClientPlayerDataPacket(
+                type = PlayerInstancedDataStores.COUNTER, playerData = patchData, isIncremental = true
+            )
+        )
+    }
+
+    fun setCountScore(counterType: CounterType, speciesId: ResourceLocation, formName: String, score: Int) {
+        val player = uuid.getPlayer() ?: return
+
+        val counter = getCounter(counterType)
+        val speciesRecord = counter.count.getOrPut(speciesId) { mutableMapOf() }
+        speciesRecord[formName] = score
+
+        val patchData = ClientCounterManager(
+            mutableMapOf(
+                counterType to Counter(
+                    mutableMapOf(
+                        speciesId to mutableMapOf(formName to speciesRecord[formName]!!)
+                    ), Streak(IGNORED_SPECIES)
+                )
+            ),
+            config.broadcast
+        )
+
+        player.sendPacket(
+            SetClientPlayerDataPacket(
+                type = PlayerInstancedDataStores.COUNTER, playerData = patchData, isIncremental = true
+            )
+        )
+    }
+
     override fun toClientData(): ClientCounterManager {
         val cloned: MutableMap<CounterType, Counter> = mutableMapOf()
         counters.forEach { (type, counter) -> cloned[type] = counter.clone() }
-        return ClientCounterManager(cloned)
+        return ClientCounterManager(cloned, emptySet())
     }
 
     /**
