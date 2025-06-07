@@ -9,7 +9,6 @@ import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.PrimitiveCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import net.minecraft.resources.ResourceLocation
-import us.timinc.mc.cobblemon.counter.CounterMod
 import us.timinc.mc.cobblemon.counter.CounterMod.config
 import us.timinc.mc.cobblemon.counter.api.Streak.Companion.IGNORED_SPECIES
 import us.timinc.mc.cobblemon.counter.event.BreakStreakEvent
