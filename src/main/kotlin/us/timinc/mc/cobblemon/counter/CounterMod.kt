@@ -6,22 +6,29 @@ import com.cobblemon.mod.common.api.scheduling.ServerTaskTracker
 import com.cobblemon.mod.common.api.spawning.condition.AppendageCondition
 import com.cobblemon.mod.common.api.spawning.condition.SpawningCondition
 import com.cobblemon.mod.common.api.storage.player.PlayerInstancedDataStoreType
+import net.minecraft.commands.synchronization.ArgumentTypeInfos
+import net.minecraft.commands.synchronization.SingletonArgumentInfo
+import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent
-import net.neoforged.neoforge.event.server.ServerStartedEvent
+import net.neoforged.neoforge.registries.DeferredRegister
 import net.neoforged.neoforge.registries.RegisterEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import us.timinc.mc.cobblemon.counter.api.CounterRegistry
+import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
+import us.timinc.mc.cobblemon.counter.command.CounterCommands
+import us.timinc.mc.cobblemon.counter.command.argument.CounterTypeArgument
+import us.timinc.mc.cobblemon.counter.command.argument.ScoreTypeArgument
 import us.timinc.mc.cobblemon.counter.config.ConfigBuilder
 import us.timinc.mc.cobblemon.counter.config.CounterConfig
 import us.timinc.mc.cobblemon.counter.event.handler.CounterEventHandlers
-import us.timinc.mc.cobblemon.counter.event.handler.ServerStartingHandler
 import us.timinc.mc.cobblemon.counter.item.CounterItems
-import us.timinc.mc.cobblemon.counter.spawning_conditions.CountSpawningCondition
+import us.timinc.mc.cobblemon.counter.registry.CounterTypes
+import us.timinc.mc.cobblemon.counter.registry.ScoreTypes
+import us.timinc.mc.cobblemon.counter.spawningconditions.CountSpawningCondition
 import us.timinc.mc.cobblemon.counter.storage.PlayerInstancedDataStores
 
 @Mod(CounterMod.MOD_ID)
@@ -29,32 +36,43 @@ object CounterMod {
     const val MOD_ID = "cobbled_counter"
 
     val saveTasks = mutableMapOf<PlayerInstancedDataStoreType, ScheduledTask>()
-
-    private var logger: Logger = LogManager.getLogger(MOD_ID)
-    var config: CounterConfig = ConfigBuilder.load(CounterConfig::class.java, MOD_ID)
-    var eventsInitialized = false
+    val commandArgumentTypes = DeferredRegister.create(Registries.COMMAND_ARGUMENT_TYPE, MOD_ID)
 
     init {
-        AppendageCondition.registerAppendage(SpawningCondition::class.java, CountSpawningCondition::class.java)
+        commandArgumentTypes.register("counter_type") { _ ->
+            ArgumentTypeInfos.registerByClass(
+                CounterTypeArgument::class.java,
+                SingletonArgumentInfo.contextFree(CounterTypeArgument::type)
+            )
+        }
+        commandArgumentTypes.register("score_type") { _ ->
+            ArgumentTypeInfos.registerByClass(
+                ScoreTypeArgument::class.java,
+                SingletonArgumentInfo.contextFree(ScoreTypeArgument::type)
+            )
+        }
     }
 
-    @EventBusSubscriber
-    object Registration {
-        @SubscribeEvent
-        fun onInit(e: ServerStartedEvent) {
-            ServerStartingHandler.handle(e)
-            CounterRegistry
-            saveTasks[PlayerInstancedDataStores.COUNTER] = ScheduledTask.Builder()
-                .execute { Cobblemon.playerDataManager.saveAllOfOneType(PlayerInstancedDataStores.COUNTER) }
-                .delay(30f)
-                .interval(120f)
-                .infiniteIterations()
-                .tracker(ServerTaskTracker)
-                .build()
-            if (eventsInitialized) return
-            eventsInitialized = true
-            CounterEventHandlers.register()
+    private var logger: Logger = LogManager.getLogger(MOD_ID)
+    var config: CounterConfig
+
+    init {
+        with(MOD_BUS) {
+            this@CounterMod.commandArgumentTypes.register(this)
         }
+        AppendageCondition.registerAppendage(SpawningCondition::class.java, CountSpawningCondition::class.java)
+        CounterEventHandlers.register()
+        CounterCommands.register()
+        CounterTypes
+        config = ConfigBuilder.load(CounterConfig::class.java, MOD_ID)
+        ScoreTypes
+        saveTasks[PlayerInstancedDataStores.COUNTER] = ScheduledTask.Builder()
+            .execute { Cobblemon.playerDataManager.saveAllOfOneType(PlayerInstancedDataStores.COUNTER) }
+            .delay(30f)
+            .interval(120f)
+            .infiniteIterations()
+            .tracker(ServerTaskTracker)
+            .build()
     }
 
     @EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)
