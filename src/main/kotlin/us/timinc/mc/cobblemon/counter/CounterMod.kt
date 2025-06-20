@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
+import net.neoforged.neoforge.common.NeoForge
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent
 import net.neoforged.neoforge.registries.DeferredRegister
 import net.neoforged.neoforge.registries.RegisterEvent
@@ -59,6 +60,8 @@ object CounterMod {
     init {
         with(MOD_BUS) {
             this@CounterMod.commandArgumentTypes.register(this)
+            addListener(::registerItems)
+            addListener(::onCreativeTabsModification)
         }
         AppendageCondition.registerAppendage(SpawningCondition::class.java, CountSpawningCondition::class.java)
         CounterEventHandlers.register()
@@ -75,17 +78,12 @@ object CounterMod {
             .build()
     }
 
-    @EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)
-    object ModRegistration {
-        @SubscribeEvent
-        fun registerItems(e: RegisterEvent) {
-            CounterItems
-        }
+    fun registerItems(e: RegisterEvent) {
+        CounterItems
+    }
 
-        @SubscribeEvent
-        fun onCreativeTabsModification(e: BuildCreativeModeTabContentsEvent) {
-            CounterItems.registerTabs(e)
-        }
+    fun onCreativeTabsModification(e: BuildCreativeModeTabContentsEvent) {
+        CounterItems.registerTabs(e)
     }
 
     fun debug(msg: String) {
